@@ -6,13 +6,13 @@ import (
 )
 
 type TripModel struct {
-	ID     primitive.ObjectID // To avoid conflicts with mongo
-	UserID string
-	Status string
-	RideFareModel
+	ID       primitive.ObjectID // To avoid conflicts with mongo
+	UserID   string
+	Status   string
+	RideFare *RideFareModel
 }
 
-// TODO: Lern context
+// TODO: Learn context
 type TripRepository interface {
 	CreateTrip(ctx context.Context, trip *TripModel) (*TripModel, error)
 }
