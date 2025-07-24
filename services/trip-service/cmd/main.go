@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"ride-sharing/services/trip-service/internal/domain"
+	h "ride-sharing/services/trip-service/internal/infrastructure/http"
 	"ride-sharing/services/trip-service/internal/infrastructure/repository"
 	"ride-sharing/services/trip-service/internal/service"
-	"time"
 )
 
 func main() {
@@ -23,8 +24,20 @@ func main() {
 	log.Println(t)
 
 	// keeps the program running
-	for {
-		time.Sleep(time.Second)
+
+	mux := http.NewServeMux()
+
+	httphandler := h.HttpHandler{Service: svc}
+
+	mux.HandleFunc("POST /preview", httphandler.HandleTripPreview)
+
+	server := &http.Server{
+		Addr:    ":8083",
+		Handler: mux,
+	}
+
+	if err := server.ListenAndServe(); err != nil {
+		log.Printf("Http server error: %v", err)
 	}
 
 }

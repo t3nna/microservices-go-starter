@@ -4,6 +4,7 @@ import (
 	"context"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"ride-sharing/services/trip-service/internal/domain"
+	"ride-sharing/shared/types"
 )
 
 type service struct {
@@ -23,4 +24,12 @@ func (s *service) CreateTrip(ctx context.Context, fare *domain.RideFareModel) (*
 		RideFare: fare,
 	}
 	return s.repo.CreateTrip(ctx, t)
+}
+
+func (s *service) GetRoute(ctx context.Context, pickup, destination *types.Coordinate) (*types.Route, error) {
+	return &types.Route{
+		Distance: 0,
+		Duration: 0,
+		Geometry: nil,
+	}, nil
 }
