@@ -1,10 +1,17 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
+	"sync"
+	"time"
 )
+
+type contextKey string
+
+var UserIdKey contextKey = "UserID"
 
 var (
 	ErrorNotImplemented = errors.New("not implemented")
@@ -27,7 +34,7 @@ type ElectricTruck struct {
 
 func (t *NormalTruck) LoadCargo() error {
 	t.cargo += 2
-	return nil
+	return errors.New("Some error")
 }
 func (t *NormalTruck) UnloadCargo() error {
 	t.cargo = 0
@@ -46,18 +53,62 @@ func (e *ElectricTruck) UnloadCargo() error {
 	return nil
 }
 
-func processTruck(truck Truck) error {
+func processTruck(ctx context.Context, truck Truck) error {
+	fmt.Printf("Started processing truck %+v\n", truck)
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*2)
+	defer cancel()
+
+	time.Sleep(time.Second)
+
 	if err := truck.LoadCargo(); err != nil {
 		return fmt.Errorf("Error loading cargo: %w \n", err)
+	}
+
+	fmt.Printf("Finished processing truck %+v\n", truck)
+	return nil
+}
+
+func processFleet(ctx context.Context, fleet []Truck) error {
+	var wg sync.WaitGroup
+	errorsChan := make(chan error, len(fleet))
+
+	for _, t := range fleet {
+		wg.Add(1)
+		go func(t Truck) {
+			if err := processTruck(ctx, t); err != nil {
+				log.Println(err)
+				errorsChan <- err
+			}
+			wg.Done()
+		}(t)
+	}
+
+	wg.Wait()
+	close(errorsChan)
+
+	var errs []error
+	for err := range errorsChan {
+		log.Printf("Error processing truck: %v\n", err)
+		errs = append(errs, err)
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("fleet processing had %v errors\n", len(errs))
 	}
 	return nil
 }
 
 func main() {
-	if err := processTruck(&NormalTruck{id: "1"}); err != nil {
-		log.Fatalf("Errror processing truck: %s", err)
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, UserIdKey, 233)
+
+	fleet := []Truck{
+		&NormalTruck{id: "NT1", cargo: 0},
+		&ElectricTruck{id: "ET1", cargo: 0, battery: 100},
+		&NormalTruck{id: "NT2", cargo: 0},
+		&ElectricTruck{id: "ET2", cargo: 0, battery: 100},
 	}
-	if err := processTruck(&ElectricTruck{id: "1"}); err != nil {
-		log.Fatalf("Errror processing truck: %s", err)
+	if err := processFleet(ctx, fleet); err != nil {
+		log.Fatal(err)
 	}
 }
