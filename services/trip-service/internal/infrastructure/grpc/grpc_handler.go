@@ -3,6 +3,8 @@ package grpc
 import (
 	"context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"log"
 	"ride-sharing/services/trip-service/internal/domain"
 	pb "ride-sharing/shared/proto/trip"
@@ -40,9 +42,11 @@ func (h *gRPCHandler) PreviewTrip(ctx context.Context, req *pb.PreviewTripReques
 	t, err := h.service.GetRoute(ctx, pickupCords, destinationCords)
 	if err != nil {
 		log.Println("Some error ", err)
+		return nil, status.Errorf(codes.Internal, "failed to get route %v", err)
 	}
 
 	return &pb.PreviewTripResponse{
-		Route: t.ToProto(),
+		Route:     t.ToProto(),
+		RideFares: []*pb.RideFare{},
 	}, nil
 }
