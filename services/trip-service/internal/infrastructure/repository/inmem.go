@@ -5,6 +5,7 @@ import (
 	"ride-sharing/services/trip-service/internal/domain"
 )
 
+// TODO: add mutexes to avoid concurrency problems
 type inmemRepository struct {
 	trips     map[string]*domain.TripModel
 	rideFares map[string]*domain.RideFareModel
@@ -21,4 +22,9 @@ func (r *inmemRepository) CreateTrip(ctx context.Context, trip *domain.TripModel
 
 	r.trips[trip.ID.Hex()] = trip
 	return trip, nil
+}
+func (r *inmemRepository) SaveRideFare(ctx context.Context, f *domain.RideFareModel) error {
+	r.rideFares[f.ID.Hex()] = f
+	return nil
+
 }

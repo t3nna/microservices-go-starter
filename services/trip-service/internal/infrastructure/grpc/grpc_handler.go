@@ -25,6 +25,9 @@ func NewGRPCHandler(server *grpc.Server, service domain.TripService) *gRPCHandle
 
 	return handler
 }
+func (h *gRPCHandler) CreateTrip(ctx context.Context, req *pb.CreteTripRequest) (*pb.CreateTripResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateTrip not implemented")
+}
 
 func (h *gRPCHandler) PreviewTrip(ctx context.Context, req *pb.PreviewTripRequest) (*pb.PreviewTripResponse, error) {
 	pickup := req.GetStartLocation()
@@ -39,14 +42,25 @@ func (h *gRPCHandler) PreviewTrip(ctx context.Context, req *pb.PreviewTripReques
 		Longitude: destination.Longitude,
 	}
 
-	t, err := h.service.GetRoute(ctx, pickupCords, destinationCords)
+	userID := req.GetUserID()
+
+	route, err := h.service.GetRoute(ctx, pickupCords, destinationCords)
 	if err != nil {
 		log.Println("Some error ", err)
 		return nil, status.Errorf(codes.Internal, "failed to get route %v", err)
 	}
 
+	// Estimate the ride
+	estimatedFares := h.service.EstimatePackagesPriceWithRoute(route)
+
+	fares, err := h.service.GenerateTripFares(ctx, estimatedFares, userID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to generate ride fares %v", err)
+
+	}
+
 	return &pb.PreviewTripResponse{
-		Route:     t.ToProto(),
-		RideFares: []*pb.RideFare{},
+		Route:     route.ToProto(),
+		RideFares: domain.ToRideFaresProto(fares),
 	}, nil
 }
