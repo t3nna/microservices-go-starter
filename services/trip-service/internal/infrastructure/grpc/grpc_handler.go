@@ -26,7 +26,25 @@ func NewGRPCHandler(server *grpc.Server, service domain.TripService) *gRPCHandle
 	return handler
 }
 func (h *gRPCHandler) CreateTrip(ctx context.Context, req *pb.CreteTripRequest) (*pb.CreateTripResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateTrip not implemented")
+
+	fareID := req.GetRideFareID()
+	userID := req.GetUserID()
+
+	rideFare, err := h.service.GetAndValidateFare(ctx, fareID, userID)
+
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get and validate fare: %v", err)
+	}
+
+	trip, err := h.service.CreateTrip(ctx, rideFare)
+
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create trip: %v", err)
+	}
+
+	return &pb.CreateTripResponse{
+		TripID: trip.ID.Hex(),
+	}, nil
 }
 
 func (h *gRPCHandler) PreviewTrip(ctx context.Context, req *pb.PreviewTripRequest) (*pb.PreviewTripResponse, error) {
@@ -53,7 +71,7 @@ func (h *gRPCHandler) PreviewTrip(ctx context.Context, req *pb.PreviewTripReques
 	// Estimate the ride
 	estimatedFares := h.service.EstimatePackagesPriceWithRoute(route)
 
-	fares, err := h.service.GenerateTripFares(ctx, estimatedFares, userID)
+	fares, err := h.service.GenerateTripFares(ctx, estimatedFares, userID, route)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to generate ride fares %v", err)
 
