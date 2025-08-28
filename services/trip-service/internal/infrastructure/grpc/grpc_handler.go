@@ -7,18 +7,21 @@ import (
 	"google.golang.org/grpc/status"
 	"log"
 	"ride-sharing/services/trip-service/internal/domain"
+	"ride-sharing/services/trip-service/internal/infrastructure/events"
 	pb "ride-sharing/shared/proto/trip"
 	"ride-sharing/shared/types"
 )
 
 type gRPCHandler struct {
 	pb.UnimplementedTripServiceServer
-	service domain.TripService
+	service   domain.TripService
+	publisher *events.TripEventPublisher
 }
 
-func NewGRPCHandler(server *grpc.Server, service domain.TripService) *gRPCHandler {
+func NewGRPCHandler(server *grpc.Server, service domain.TripService, publisher *events.TripEventPublisher) *gRPCHandler {
 	handler := &gRPCHandler{
-		service: service,
+		service:   service,
+		publisher: publisher,
 	}
 
 	pb.RegisterTripServiceServer(server, handler)
@@ -41,6 +44,8 @@ func (h *gRPCHandler) CreateTrip(ctx context.Context, req *pb.CreteTripRequest) 
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create trip: %v", err)
 	}
+
+	h.publisher.PublishTripCreated(ctx)
 
 	return &pb.CreateTripResponse{
 		TripID: trip.ID.Hex(),

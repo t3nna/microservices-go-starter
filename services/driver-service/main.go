@@ -7,12 +7,15 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"ride-sharing/shared/env"
+	"ride-sharing/shared/messaging"
 	"syscall"
 )
 
 var GrpcAddr = ":9092"
 
 func main() {
+	rabbitMqUri := env.GetString("RABBITMQ_URI", "amqp://guest:guest@localhost:5672/")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -31,6 +34,13 @@ func main() {
 	}
 
 	svc := NewService()
+	// rabbitMQ connection
+	rabbitmq, err := messaging.NewRabbitMQ(rabbitMqUri)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rabbitmq.Close()
+
 	// starting the grpcServer
 	grpcServer := grpcserver.NewServer()
 	NewGrpcHandler(grpcServer, svc)
