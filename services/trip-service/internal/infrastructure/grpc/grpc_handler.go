@@ -45,7 +45,7 @@ func (h *gRPCHandler) CreateTrip(ctx context.Context, req *pb.CreteTripRequest) 
 		return nil, status.Errorf(codes.Internal, "failed to create trip: %v", err)
 	}
 
-	h.publisher.PublishTripCreated(ctx)
+	h.publisher.PublishTripCreated(ctx, trip)
 
 	return &pb.CreateTripResponse{
 		TripID: trip.ID.Hex(),
